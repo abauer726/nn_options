@@ -1,2 +1,1 @@
-# nn_options
-CFMAR Lab - Neural Nets for American Option Pricing
+# CFMAR Lab - Neural Nets for American Option Pricing
