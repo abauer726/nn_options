@@ -1,3 +1,7 @@
+#### EDIT THIS TO BE FOR PYTORCH 
+# as of 10/17: this page is entirely in tensorflow
+
+
 # Stage 1 and 2 - Diagnostics
 
 from scaler import scaler
