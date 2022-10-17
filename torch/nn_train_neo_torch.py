@@ -1,3 +1,7 @@
+#### EDIT THIS TO BE FOR PYTORCH 
+# as of 10/17: this page is entirely in tensorflow
+
+
 # Longstaff Schwartz Algorithm
 # Implementation of the LSM with a sequence of neural networks
 
