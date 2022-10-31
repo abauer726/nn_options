@@ -10,9 +10,9 @@ from payoffs import payoff
 ## Libraries
 import time
 import numpy as np
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.initializers import TruncatedNormal
+from torch import nn 
+from torch.nn.functional import softmax # replaces tf dense and sequential
+from pytorch.keras.initializers import TruncatedNormal
 
 def NN_payoff_neo(time_step, stock, model, net, NN, convert_in, convert_out, val, \
                   nn_val = None, nn_dt = None, stop = False, display_time = False):
@@ -490,6 +490,29 @@ def NN_aggregate_neo(model, NN, convert_in, convert_out, nn_val, data = False,
                        bias_initializer = initializer)) 
     NNagg.compile(optimizer = optim, loss = lossfct)
     NNagg.fit(nn_input, nn_output, epochs = epoch_num, batch_size = batch_num, verbose = 0)   
+    
+    
+### THIS IS THE PYTORCH VERSION
+class CustomModel(nn.Module):
+    def __init__(self, vocab_size=50,
+              embedding_dim=16,
+              hidden_size=8):
+     super().__init__()
+     self.encoder = nn.Embedding(vocab_size, embedding_dim)
+     self.lstm = nn.LSTM(embedding_dim, hidden_size)
+     self.linear = nn.Linear(hidden_size, 1)
+self.activation = nn.Sigmoid()
+
+def forward(self, x):
+     output = self.encoder(x)
+     output, _ = self.lstm(output)
+     output = output[-1] # Keep last output only
+     output = self.linear(output)
+output = self.activation(output)
+return output
+## THIS IS THE PYTORCH VERSION
+    
+    
     if display_time:
         print('Training time:', np.round(time.time()-time_all, 2), 'sec')
     return NNagg

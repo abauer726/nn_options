@@ -21,7 +21,8 @@ import time
 import numpy as np
 import matplotlib 
 import matplotlib.pyplot as plt
-import tensorflow as tf
+import tensorflow as tf # delete this line when converted to torch
+import torch
 
 
 #########################
@@ -34,7 +35,7 @@ bput1 = {'dim': 1, 'K': 40, 'x0': np.repeat(40, 1), 'sigma': np.repeat(0.2,1),
 # Initializing -- Fine Time Grid
 model_update(bput1, dt = 0.025)
 np.random.seed(15)
-tf.random.set_seed(15)
+torch.manual_seed(15)
 stock_fine_p1 = stock_sim(100000, bput1)
 (c_in_p1, c_out_p1) = scaler(stock_fine_p1, bput1)
 
@@ -46,7 +47,7 @@ stock_coa_p1 = stock_thin(stock_fine_p1, bput1, coa_dt) # Coarse time grid
 # Training Data -- Coarse Time Grid
 epnum = 50
 np.random.seed(15)
-tf.random.set_seed(15)
+torch.manual_seed(15)
 (NN_seq_coa_p1, x_p1, y_p1) = NN_seq_train_neo(stock_coa_p1, bput1, c_in_p1, c_out_p1, \
                                     theta = 'average', data = True, val = 'cont', \
                                     node_num = 25, epoch_num = epnum, display_time=True)
@@ -55,7 +56,7 @@ tf.random.set_seed(15)
 # Initializing Fine Test Grid
 model_update(bput1, dt = 0.025)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(15)
 stockFwd_fine_p1 = stock_sim(100000, bput1)
 coa_dt = 0.05
 model_update(bput1, dt = coa_dt)
@@ -90,7 +91,7 @@ plt.clf()
 '''    
 ## Aggregate Neural Network -- Coarse Time Grid
 np.random.seed(16)
-tf.random.set_seed(16)
+torch.manual_seed(16)
 # Same Paths
 NN_agg_coa_p1 = NN_aggregate_neo(bput1, NN_seq_coa_p1, c_in_p1, c_out_p1, nn_val = 'cont', \
                             stock = stock_coa_p1, node_num = 25, batch_num = 64, \
@@ -98,7 +99,7 @@ NN_agg_coa_p1 = NN_aggregate_neo(bput1, NN_seq_coa_p1, c_in_p1, c_out_p1, nn_val
     
 # Training Data
 np.random.seed(16)
-tf.random.set_seed(16)
+torch.manual_seed(16)
 NN_agg_coa_data_p1 = NN_aggregate_neo(bput1, NN_seq_coa_p1, c_in_p1, c_out_p1, nn_val = 'cont', \
                             data = True, x = x_p1, y = y_p1, node_num = 25, batch_num = 64, \
                             epoch_num = epnum, display_time=True)
@@ -107,7 +108,7 @@ NN_agg_coa_data_p1 = NN_aggregate_neo(bput1, NN_seq_coa_p1, c_in_p1, c_out_p1, n
 # Initializing Fine Test Grid
 model_update(bput1, dt = 0.025)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(16)
 stockFwd_fine_p1 = stock_sim(100000, bput1)
 coa_dt = 0.2
 
@@ -183,7 +184,7 @@ for dt in [0.2, 0.1, 0.05, 0.025]:
 # Initializing Fine Test Grid
 model_update(bput1, dt = 0.025)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(18)
 stockFwd_fine_p1 = stock_sim(100000, bput1)
 coa_dt = 0.2
 model_update(bput1, dt = coa_dt)
@@ -262,7 +263,7 @@ plt.clf()
 # Initializing Fine Test Grid
 model_update(bput1, dt = 0.025)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(18)
 stockFwd_fine_p1 = stock_sim(100000, bput1)
 # Coarse Test Grid
 coa_dt = 0.2
@@ -344,7 +345,7 @@ for dt in [0.2, 0.1, 0.05, 0.025]:
 # Initializing Fine Test Grid
 model_update(bput1, dt = 0.025)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(18)
 stockFwd_fine_p1 = stock_sim(100000, bput1)
 # Coarse Test Grid
 coa_dt = 0.2
@@ -534,7 +535,7 @@ mcall2 = {'dim': 2, 'K': 100, 'x0': np.repeat(100, 2), 'sigma': np.repeat(0.2,2)
 # Initializing -- Fine Time Grid
 model_update(mcall2, dt = 0.025)
 np.random.seed(15)
-tf.random.set_seed(15)
+torch.manual_seed(18)
 stock_fine_m2 = stock_sim(100000, mcall2)
 (c_in_m2, c_out_m2) = scaler(stock_fine_m2, mcall2)
 
@@ -546,7 +547,7 @@ stock_coa_m2 = stock_thin(stock_fine_m2, mcall2, coa_dt) # Coarse time grid
 ## Sequence of Neural Networks -- Coarse Time Grid
 epnum = 50
 np.random.seed(15)
-tf.random.set_seed(15)
+torch.manual_seed(18)
 (NN_seq_coa_m2, x_m2, y_m2) = NN_seq_train_neo(stock_coa_m2, mcall2, c_in_m2, c_out_m2, \
                                     theta = 'average', data = True, val = 'cont', \
                                     node_num = 25, epoch_num = epnum, display_time=True)
@@ -555,7 +556,7 @@ tf.random.set_seed(15)
 # Initializing Fine Test Grid
 model_update(mcall2, dt = 0.025)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(18)
 stockFwd_fine_m2 = stock_sim(100000, mcall2)
 coa_dt = 0.05
 model_update(mcall2, dt = coa_dt)
@@ -597,7 +598,7 @@ for t in [0.1]:
 ## Aggregate Neural Network -- Coarse Time Grid
 epnum = 5
 np.random.seed(16)
-tf.random.set_seed(16)
+torch.manual_seed(16)
 # Same Paths
 NN_agg_coa_m2 = NN_aggregate_neo(mcall2, NN_seq_coa_m2, c_in_m2, c_out_m2, nn_val = 'cont', \
                             stock = stock_coa_m2, node_num = 25, batch_num = 64, \
@@ -605,7 +606,7 @@ NN_agg_coa_m2 = NN_aggregate_neo(mcall2, NN_seq_coa_m2, c_in_m2, c_out_m2, nn_va
     
 # Training Data
 np.random.seed(16)
-tf.random.set_seed(16)
+torch.manual_seed(16)
 NN_agg_coa_data_m2 = NN_aggregate_neo(mcall2, NN_seq_coa_m2, c_in_m2, c_out_m2, nn_val = 'cont', \
                             data = True, x = x_m2, y = y_m2, node_num = 25, batch_num = 64, \
                             epoch_num = epnum, display_time=True)
@@ -614,7 +615,7 @@ NN_agg_coa_data_m2 = NN_aggregate_neo(mcall2, NN_seq_coa_m2, c_in_m2, c_out_m2, 
 # Initializing Fine Test Grid
 model_update(mcall2, dt = 0.025)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(18)
 stockFwd_fine_m2 = stock_sim(100000, mcall2)
 
 # [0.2, 0.1, 0.05, 0.025]
@@ -710,7 +711,7 @@ mcall5 = {'dim': 5, 'K': 100, 'x0': np.repeat(70, 5),
 # Initializing -- Fine Time Grid
 model_update(mcall5, dt = 1/3)
 np.random.seed(15)
-tf.random.set_seed(15)
+torch.manual_seed(15)
 stock_fine_m5 = stock_sim(50000, mcall5)
 (c_in_m5, c_out_m5) = scaler(stock_fine_m5, mcall5)
 
@@ -722,7 +723,7 @@ stock_coa_m5 = stock_thin(stock_fine_m5, mcall5, coa_dt) # Coarse time grid
 ## Sequence of Neural Networks -- Coarse Time Grid
 epnum = 5
 np.random.seed(15)
-tf.random.set_seed(15)
+torch.manual_seed(15)
 (NN_seq_coa_m5, x_m5, y_m5) = NN_seq_train_neo(stock_coa_m5, mcall5, c_in_m5, c_out_m5, \
                                     theta = 'average', data = True, val = 'cont', \
                                     node_num = 25, epoch_num = epnum, display_time=True)
@@ -731,7 +732,7 @@ tf.random.set_seed(15)
 # Initializing Fine Test Grid
 model_update(mcall5, dt = 1/3)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(18)
 stockFwd_fine_m5 = stock_sim(100000, mcall5)
 coa_dt = 0.2
 model_update(mcall5, dt = coa_dt)
@@ -763,7 +764,7 @@ mcall3 = {'dim': 3, 'K': 100, 'x0': np.repeat(90, 3), 'sigma': np.repeat(0.2,3),
 ## Aggregate Neural Network -- Coarse Time Grid
 epnum = 5
 np.random.seed(16)
-tf.random.set_seed(16)
+torch.manual_seed(16)
 # Same Paths
 NN_agg_coa_m5 = NN_aggregate_neo(mcall5, NN_seq_coa_m5, c_in_m5, c_out_m5, nn_val = 'cont', \
                             stock = stock_coa_m5, node_num = 25, batch_num = 64, \
@@ -771,7 +772,7 @@ NN_agg_coa_m5 = NN_aggregate_neo(mcall5, NN_seq_coa_m5, c_in_m5, c_out_m5, nn_va
     
 # Training Data
 np.random.seed(16)
-tf.random.set_seed(16)
+torch.manual_seed(16)
 NN_agg_coa_data_m5 = NN_aggregate_neo(mcall5, NN_seq_coa_m5, c_in_m5, c_out_m5, nn_val = 'cont', \
                             data = True, x = x_m5, y = y_m5, node_num = 25, batch_num = 64, \
                             epoch_num = epnum, display_time=True)
@@ -780,7 +781,7 @@ NN_agg_coa_data_m5 = NN_aggregate_neo(mcall5, NN_seq_coa_m5, c_in_m5, c_out_m5, 
 # Initializing Fine Test Grid
 model_update(mcall5, dt = 1/3)
 np.random.seed(18)
-tf.random.set_seed(18)
+torch.manual_seed(18)
 stockFwd_fine_m5 = stock_sim(100000, mcall5)
 
 for dt in [1/3]:
