@@ -1,26 +1,25 @@
 #### EDIT THIS TO BE FOR PYTORCH 
-# as of 10/17: this page is entirely in tensorflow
+# as of 10/31: This code is in the process of being transformed to torch. there are a few issues in line 21,170,218
 
-
-# Longstaff Schwartz Algorithm
-# Implementation of the LSM with a sequence of neural networks
 
 from payoffs import payoff
 
 ## Libraries
 import time
 import numpy as np
-import tensorflow as tf
-tf.autograph.experimental.do_not_convert
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-from tensorflow.keras.initializers import TruncatedNormal
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+import torchvision.transforms as transforms
+from torch.nn.init import trunc_normal_
+
 
 
 def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
                      otm = False, data = False, val = None, node_num = 16, epoch_num = 50, 
-                     batch_num = 64, actfct = 'elu', initializer = TruncatedNormal(mean = 0.0, stddev = 0.05),
-                     optim = 'adam', lossfct = 'mean_squared_error', display_time = False):
+                     batch_num = 64, actfct = nn.ReLU() , initializer = trunc_normal_('TENSOR NEEDS TO GO HERE',mean = 0.0, std = .05),
+                     optim = torch.optim.Adam(), lossfct = nn.MSELoss(), display_time = False):
     '''
     Longstaff Schwartz Algorithm
     Implementation of the LSM using a sequence of neural network objects. Training 
@@ -66,7 +65,6 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
               'mean_squared_error'.
     display_time : Boolean asserting whether to display the time spent per step. 
                    The default is False.
-
     Returns
     -------
     NN : List of neural network objects (size M-1)
@@ -74,7 +72,7 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
     y : Output data used to train the sequence of neural network objects
     '''
     
-    tf.autograph.experimental.do_not_convert(
+    torch.jit.ignore(
         func=None
     )
     
@@ -136,18 +134,41 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
         
         # Defining and training the neural network
         if  i == nSteps-2:
-            NNet_seq = Sequential()    
-            NNet_seq.add(Dense(node_num, input_shape = (nn_dim,), activation = actfct,
-                         kernel_initializer = initializer, bias_initializer = initializer))            
-            NNet_seq.add(Dense(node_num, activation = actfct,
-                         kernel_initializer = initializer, bias_initializer = initializer))
-            NNet_seq.add(Dense(node_num, activation = actfct, 
-                         kernel_initializer = initializer, bias_initializer = initializer))
-            NNet_seq.add(Dense(1, activation = None, 
-                         kernel_initializer = initializer, bias_initializer = initializer))
-            NNet_seq.compile(optimizer = optim, loss = lossfct)
-            NNet_seq.fit(nn_input, nn_output, epochs = epoch_num, \
-                         batch_size = batch_num, verbose = 0)
+            NNet_seq = nn.Sequential()   
+
+            NNet_seq.nn.Linear((nn_dim,),out_features = node_num, bias = True)
+            NNet_seq.nn.init(initializer)
+            NNet_seq.actfct
+            '''NNet_seq.add(Dense(node_num, input_shape = (nn_dim,), activation = actfct,
+                         kernel_initializer = initializer, bias_initializer = initializer))'''
+            NNet_seq.nn.Linear(out_features = node_num, bias = True)
+            NNet_seq.nn.init(initializer)
+            NNet_seq.actfct
+            '''NNet_seq.add(Dense(node_num, activation = actfct,
+                         kernel_initializer = initializer, bias_initializer = initializer))'''
+            NNet_seq.nn.Linear(out_features = node_num, bias = True)
+            NNet_seq.nn.init(initializer)
+            NNet_seq.actfct
+
+            '''NNet_seq.add(Dense(node_num, activation = actfct, 
+                         kernel_initializer = initializer, bias_initializer = initializer))'''
+
+            NNet_seq.nn.Linear(out_features = 1, bias = True)
+            NNet_seq.nn.init(initializer)
+
+            '''NNet_seq.add(Dense(1, activation = None, 
+                         kernel_initializer = initializer, bias_initializer = initializer))'''
+            
+            NNet_seq.optim
+            NNet_seq.lossfct
+            '''
+            model = CustomModel()
+            criterion = nn.BCELoss()
+            optimizer = torch.optim.Adam(model.parameters())'''
+
+
+            NNet_seq.fit(nn_input, nn_output, epochs = epoch_num, \ 
+                         batch_size = batch_num, verbose = 0) ## MIGHT HAVE TO WRITE WHOLE FUNCTION FOR FIT HERE!
         else:
             if theta == 'average':
                 # Average weights and biases
@@ -174,22 +195,28 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
                 w_mean = initializer
                 b_mean = initializer
                   
-            NNet_seq = Sequential()
-            NNet_seq.add(Dense(node_num, input_shape = (nn_dim,), activation = actfct,
-                            kernel_initializer = tf.keras.initializers.Constant(w_mean[0]), 
-                            bias_initializer = tf.keras.initializers.Constant(b_mean[0])))            
-            NNet_seq.add(Dense(node_num, activation = actfct,
-                            kernel_initializer = tf.keras.initializers.Constant(w_mean[1]),
-                            bias_initializer = tf.keras.initializers.Constant(b_mean[1])))
-            NNet_seq.add(Dense(node_num, activation = actfct, 
-                            kernel_initializer = tf.keras.initializers.Constant(w_mean[2]), 
-                            bias_initializer = tf.keras.initializers.Constant(b_mean[2])))
-            NNet_seq.add(Dense(1, activation = None, 
-                            kernel_initializer = tf.keras.initializers.Constant(w_mean[3]), 
-                            bias_initializer = tf.keras.initializers.Constant(b_mean[3])))
-            NNet_seq.compile(optimizer = optim, loss = lossfct)
+            NNet_seq = nn.Sequential()
+
+            NNet_seq.nn.Linear((nn_dim,),out_features = node_num, bias = True)
+            NNet_seq.nn.init.constant_(w_mean[0])
+            NNet_seq.actfct
+
+            NNet_seq.nn.Linear(out_features = node_num, bias = True)
+            NNet_seq.nn.init.constant_(w_mean[1])
+            NNet_seq.actfct
+            
+            NNet_seq.nn.Linear(out_features = node_num, bias = True)
+            NNet_seq.nn.init.constant_(w_mean[2])
+            NNet_seq.actfct
+            
+            NNet_seq.nn.Linear(out_features = 1, bias = True)
+            NNet_seq.nn.init.constant_(w_mean[3])
+
+            NNet_seq.optim
+            NNet_seq.lossfct
+
             NNet_seq.fit(nn_input, nn_output, epochs = epoch_num, \
-                                  batch_size = batch_num, verbose = 0)
+                                  batch_size = batch_num, verbose = 0) ## WHOLE FIT FUNCTION HERE
         
         # Storing neural network objects
         NN.append(NNet_seq)
@@ -229,3 +256,4 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
         return (NN, x, y)
     else:
         return NN
+
