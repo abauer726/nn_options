@@ -21,7 +21,7 @@ import time
 import numpy as np
 import matplotlib 
 import matplotlib.pyplot as plt
-import tensorflow as tf # delete this line when converted to torch
+# import tensorflow as tf # delete this line when converted to torch
 import torch
 
 
