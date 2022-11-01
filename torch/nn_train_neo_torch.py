@@ -218,6 +218,7 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
             NNet_seq.fit(nn_input, nn_output, epochs = epoch_num, \
                                   batch_size = batch_num, verbose = 0) ## WHOLE FIT FUNCTION HERE
         
+        
         # Storing neural network objects
         NN.append(NNet_seq)
         
