@@ -354,7 +354,7 @@ def NN_payoff_v3(time_step, stock, model, net, NN, convert_in, convert_out, val,
         
 def NN_aggregate_neo(model, NN, convert_in, convert_out, nn_val, data = False, 
                      x = None, y = None, stock = None, otm = False, node_num = 16, 
-                     epoch_num = 50, batch_num = 64, actfct = 'elu', 
+                     epoch_num = 5, batch_num = 64, actfct = 'relu', 
                      initializer = TruncatedNormal(mean = 0.0, stddev = 0.05), 
                      optim = 'adam', lossfct = 'mean_squared_error', display_time = False):
     '''
@@ -484,7 +484,7 @@ def NN_aggregate_neo(model, NN, convert_in, convert_out, nn_val, data = False,
                        bias_initializer = initializer))
     NNagg.add(Dense(1, activation = None, kernel_initializer = initializer, \
                        bias_initializer = initializer)) 
-    NNagg.compile(optimizer = optim, loss = lossfct)
+    NNagg.compile(optimizer = optim, loss = lossfct, metrics=['accuracy'])
     NNagg.fit(nn_input, nn_output, epochs = epoch_num, batch_size = batch_num, verbose = 0)   
     if display_time:
         print('Training time:', np.round(time.time()-time_all, 2), 'sec')

@@ -140,9 +140,9 @@ def NN_contour_neo(t_step, NN, convert_in, convert_out, model, net, nn_val = Non
 
     nSteps = int(model['T']/model['dt'])
     if net == 'seq':
-        if not(t_step in np.round(np.arange(0, model['T'], model['dt']),4)):
+        if not(np.round(t_step,4) in np.round(np.arange(0, model['T'], model['dt']),4)):
             raise TypeError('Time step is out of range for the model dt.')
-        step = int(t_step*nSteps)    
+        step = int(round(t_step/model['dt'])) - 1   
     if model['dim'] != 2:
         raise TypeError('Only works for 2-dim options.')
     
