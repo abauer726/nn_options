@@ -1,6 +1,3 @@
-#### EDIT THIS TO BE FOR PYTORCH 
-
-
 # Longstaff Schwartz Algorithm
 # Implementation of a aggregate neural network
 
@@ -9,14 +6,13 @@ from payoffs import payoff
 ## Libraries
 import time
 import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.initializers import TruncatedNormal
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
-import torchvision.transforms as transforms
-from torch.nn.init import trunc_normal_
-
-# these do the same thing: torch.nn.Linear and tf.keras.layers.Dense 
 
 def NN_payoff_neo(time_step, stock, model, net, NN, convert_in, convert_out, val, \
                   nn_val = None, nn_dt = None, stop = False, display_time = False):
@@ -24,7 +20,6 @@ def NN_payoff_neo(time_step, stock, model, net, NN, convert_in, convert_out, val
     Longstaff Schwartz Algorithm
     Computes the realized payoff at a given time step using either a sequence of 
     neural network objects or an aggregate network.
-
     Parameters
     ----------
     time_step : Float indicating the initial time step
@@ -52,7 +47,6 @@ def NN_payoff_neo(time_step, stock, model, net, NN, convert_in, convert_out, val
     stop : Boolean asserting whether to display stopping times. The default is False.
     display_time : Boolean asserting whether to display the time spent per step. 
                    The default is False.
-
     Returns
     -------
     r_pay : Array of realized payoff (size N)
@@ -195,7 +189,6 @@ def NN_payoff_v3(time_step, stock, model, net, NN, convert_in, convert_out, val,
     Longstaff Schwartz Algorithm
     Computes the realized payoff at a given time step using either a sequence of 
     neural network objects or an aggregate network.
-
     Parameters
     ----------
     time_step : Float indicating the initial time step
@@ -223,7 +216,6 @@ def NN_payoff_v3(time_step, stock, model, net, NN, convert_in, convert_out, val,
     stop : Boolean asserting whether to display stopping times. The default is False.
     display_time : Boolean asserting whether to display the time spent per step. 
                    The default is False.
-
     Returns
     -------
     r_pay : Array of realized payoff (size N)
@@ -362,12 +354,11 @@ def NN_payoff_v3(time_step, stock, model, net, NN, convert_in, convert_out, val,
         
 def NN_aggregate_neo(model, NN, convert_in, convert_out, nn_val, data = False, 
                      x = None, y = None, stock = None, otm = False, node_num = 16, 
-                     epoch_num = 50, batch_num = 64, actfct = nn.ReLU(), 
-                     initializer = torch.nn.init.normal_('figure out what the tensor would be', mean=0.0, std=.05), 
-                     optim = torch.optim.Adam(), lossfct = nn.MSELoss(), display_time = False):
+                     epoch_num = 5, batch_num = 64, actfct = 'relu', 
+                     initializer = TruncatedNormal(mean = 0.0, stddev = 0.05), 
+                     optim = 'adam', lossfct = 'mean_squared_error', display_time = False):
     '''
     Builds an aggreagte neural network from a sequence of neural network objects 
-
     Parameters
     ----------
     model : Dictionary containing all the parameters of the stock and contract
@@ -399,7 +390,6 @@ def NN_aggregate_neo(model, NN, convert_in, convert_out, nn_val, data = False,
               'mean_squared_error'.
     display_time : Boolean asserting whether to display the time spent per step. 
                    The default is False.
-
     Returns
     -------
     NNagg : Aggregate Neural Network object
@@ -483,67 +473,35 @@ def NN_aggregate_neo(model, NN, convert_in, convert_out, nn_val, data = False,
     # Try LeakyReLU
     # Try bias 0 (bias can change)
     # Xaiver golrot initialization for weights and biases
-
-    NNagg = nn.Sequential()   
-
-    NNagg.nn.Linear((nn_dim_agg,),out_features = node_num, bias = True)
-    NNagg.nn.init(initializer)
-    NNagg.actfct
+    class Net(nn.Module):
+        def __init__(self, node_num, nn_dim_agg, actfct, initializer, optim, lossfct):
+            super(Net, self).__init__()
+            self.fc1 = nn.Linear(nn_dim_agg, node_num)
+            self.fc2 = nn.Linear(node_num, node_num)
+            self.fc3 = nn.Linear(node_num, node_num)
+            self.fc4 = nn.Linear(node_num, 1)
             
-    '''NNagg.add(Dense(node_num, input_shape = (nn_dim_agg,), activation = actfct, \
-                               kernel_initializer = initializer, bias_initializer = initializer)) '''
-    
-    NNagg.nn.Linear(out_features = node_num, bias = True)
-    NNagg.nn.init(initializer)
-    NNagg.actfct
-            
-    '''
-    NNagg.add(Dense(node_num, activation = actfct, kernel_initializer = initializer, \
-                bias_initializer = initializer)) '''
-            
-    NNagg.nn.Linear(out_features = node_num, bias = True)
-    NNagg.nn.init(initializer)
-    NNagg.actfct
+        def forward(self, x):
+            x = F.relu(self.fc1(x))
+            x = F.relu(self.fc2(x))
+            x = F.relu(self.fc3(x))
+            x = self.fc4(x)
+            return x
 
-    ''' NNagg.add(Dense(node_num, activation = actfct, kernel_initializer = initializer, \
-                                   bias_initializer = initializer)) '''
+    NNagg = Net(node_num, nn_dim_agg, actfct, initializer, optim, lossfct)
+    criterion = nn.MSELoss()
+    optimizer = optim
 
-    NNagg.nn.Linear(out_features = 1, bias = True)
-    NNagg.nn.init(initializer)
+    for epoch in range(epoch_num):
+        outputs = NNagg(nn_input)
+        loss = criterion(outputs, nn_output)
 
-    '''NNagg.add(Dense(1, activation = None, 
-        kernel_initializer = initializer, bias_initializer = initializer))'''
-            
-    NNagg.optim
-    
-    NNagg.lossfct
-    
-    '''
-    NNagg.compile(optimizer = optim, loss = lossfct)
-    NNagg.fit(nn_input, nn_output, epochs = epoch_num, batch_size = batch_num, verbose = 0)  '''
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-    
-    
-### THIS IS THE PYTORCH VERSION
-# class CustomModel(nn.Module):
-#     def __init__(self, vocab_size=50,
-#               embedding_dim=16,
-#               hidden_size=8):
-#      super().__init__()
-#      self.encoder = nn.Embedding(vocab_size, embedding_dim)
-#      self.lstm = nn.LSTM(embedding_dim, hidden_size)
-#      self.linear = nn.Linear(hidden_size, 1)
-# self.activation = nn.Sigmoid()
-
-# def forward(self, x):
-#      output = self.encoder(x)
-#      output, _ = self.lstm(output)
-#      output = output[-1] # Keep last output only
-#      output = self.linear(output)
-# output = self.activation(output)
-# return output
-## THIS IS THE PYTORCH VERSION
-    
     if display_time:
         print('Training time:', np.round(time.time()-time_all, 2), 'sec')
     return NNagg
+
+
