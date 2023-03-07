@@ -25,7 +25,7 @@ import tensorflow as tf
 #########################
 
 bput1 = {'dim': 1, 'K': 40, 'x0': np.repeat(40, 1), 'sigma': np.repeat(0.2,1), 
-         'r': 0.05, 'div': np.repeat(0, 1), 'T': 1, 'dt': 0.05, 'payoff.func': 'put.payoff'}
+         'r': 0.06, 'div': np.repeat(0, 1), 'T': 1, 'dt': 0.04, 'payoff.func': 'put.payoff'}
 
 # Initializing -- Fine Time Grid
 model_update(bput1, dt = 0.025)
@@ -35,7 +35,7 @@ stock_fine_p1 = stock_sim(100000, bput1)
 (c_in_p1, c_out_p1) = scaler(stock_fine_p1, bput1)
 
 # Thin at coarse dt
-coa_dt = 0.05
+coa_dt = 0.2
 model_update(bput1, dt = coa_dt)
 stock_coa_p1 = stock_thin(stock_fine_p1, bput1, coa_dt) # Coarse time grid
   
@@ -45,7 +45,7 @@ np.random.seed(15)
 tf.random.set_seed(15)
 (NN_seq_coa_p1, x_p1, y_p1) = NN_seq_train_neo(stock_coa_p1, bput1, c_in_p1, c_out_p1, \
                                     theta = 'average', data = True, val = 'cont', \
-                                    node_num = 25, epoch_num = epnum, display_time=True)
+                                    node_num = 60, epoch_num = epnum, display_time=True, tot_time = True)
 
 ## Testing 
 # Initializing Fine Test Grid
@@ -53,7 +53,7 @@ model_update(bput1, dt = 0.025)
 np.random.seed(18)
 tf.random.set_seed(18)
 stockFwd_fine_p1 = stock_sim(100000, bput1)
-coa_dt = 0.05
+coa_dt = 0.2
 model_update(bput1, dt = coa_dt)
 stockFwd_coa_p1 = stock_thin(stockFwd_fine_p1, bput1, coa_dt)
 
@@ -524,46 +524,46 @@ plt.savefig('Basket-Put-Boundary-agg-NN-data-path-8-forensics-time.png', dpi=100
 #### 2D - Max Call ####
 #######################
 
-# mcall2 = {'dim': 2, 'K': 100, 'x0': np.repeat(100, 2), 'sigma': np.repeat(0.2,2), 
-#          'r': 0.05, 'div': np.repeat(0,2), 'T': 1, 'dt': 0.05, 'payoff.func': 'maxi.call.payoff'}
+mcall2 = {'dim': 5, 'K': 100, 'x0': np.repeat(70, 5), 'sigma': [0.08,0.16,0.24,0.32,0.4], 
+          'r': 0.05, 'div': np.repeat(0.1,5), 'T': 3, 'dt': (1/3), 'payoff.func': 'maxi.call.payoff'}
 
-# # Initializing -- Fine Time Grid
-# model_update(mcall2, dt = 0.025)
-# np.random.seed(15)
-# tf.random.set_seed(15)
-# stock_fine_m2 = stock_sim(100000, mcall2)
-# (c_in_m2, c_out_m2) = scaler(stock_fine_m2, mcall2)
+ # Initializing -- Fine Time Grid
+model_update(mcall2, dt = 0.025)
+np.random.seed(15)
+tf.random.set_seed(15)
+stock_fine_m2 = stock_sim(100000, mcall2)
+(c_in_m2, c_out_m2) = scaler(stock_fine_m2, mcall2)
 
-# # Thin at coarse dt
-# coa_dt = 0.05
-# model_update(mcall2, dt = coa_dt)
-# stock_coa_m2 = stock_thin(stock_fine_m2, mcall2, coa_dt) # Coarse time grid
+# Thin at coarse dt
+coa_dt = 0.05
+model_update(mcall2, dt = coa_dt)
+stock_coa_m2 = stock_thin(stock_fine_m2, mcall2, coa_dt) # Coarse time grid
 
-# ## Sequence of Neural Networks -- Coarse Time Grid
-# epnum = 50
-# np.random.seed(15)
-# tf.random.set_seed(15)
-# (NN_seq_coa_m2, x_m2, y_m2) = NN_seq_train_neo(stock_coa_m2, mcall2, c_in_m2, c_out_m2, \
-#                                     theta = 'average', data = True, val = 'cont', \
-#                                     node_num = 25, epoch_num = epnum, display_time=True)
+## Sequence of Neural Networks -- Coarse Time Grid
+epnum = 50
+np.random.seed(15)
+tf.random.set_seed(15)
+(NN_seq_coa_m2, x_m2, y_m2) = NN_seq_train_neo(stock_coa_m2, mcall2, c_in_m2, c_out_m2, \
+                                    theta = 'average', data = True, val = 'cont', \
+                                    node_num = 25, epoch_num = epnum, display_time=True)
 
-# ## Testing 
-# # Initializing Fine Test Grid
-# model_update(mcall2, dt = 0.025)
-# np.random.seed(18)
-# tf.random.set_seed(18)
-# stockFwd_fine_m2 = stock_sim(100000, mcall2)
-# coa_dt = 0.05
-# model_update(mcall2, dt = coa_dt)
-# stockFwd_coa_m2 = stock_thin(stockFwd_fine_m2, mcall2, coa_dt) 
+## Testing 
+# Initializing Fine Test Grid
+model_update(mcall2, dt = 0.025)
+np.random.seed(18)
+tf.random.set_seed(18)
+stockFwd_fine_m2 = stock_sim(100000, mcall2)
+coa_dt = 0.05
+model_update(mcall2, dt = coa_dt)
+stockFwd_coa_m2 = stock_thin(stockFwd_fine_m2, mcall2, coa_dt) 
 
-# (r_seq_coa_m2, stop_seq_m2) = NN_payoff_neo(0, stockFwd_coa_m2, mcall2, 'seq', NN_seq_coa_m2, c_in_m2, c_out_m2, \
-#                          val = 'cont', nn_val = 'cont', nn_dt = coa_dt, stop=True, display_time=False)
+(r_seq_coa_m2, stop_seq_m2) = NN_payoff_neo(0, stockFwd_coa_m2, mcall2, 'seq', NN_seq_coa_m2, c_in_m2, c_out_m2, \
+                         val = 'cont', nn_val = 'cont', nn_dt = coa_dt, stop=True, display_time=False)
 
-# print('dt:', coa_dt)
-# print('Price - seq NN:', np.round(np.mean(r_seq_coa_m2), 4))
+print('dt:', coa_dt)
+print('Price - seq NN:', np.round(np.mean(r_seq_coa_m2), 4))
   
-# # Contours from the Sequence of Neural Networks
+# Contours from the Sequence of Neural Networks
 # model_update(mcall2, dt = 0.05)
 # norm_max = matplotlib.colors.Normalize(vmin=-15, vmax=15)
 # contours = []

@@ -15,8 +15,8 @@ from tensorflow.keras.initializers import TruncatedNormal
 
 def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
                      otm = False, data = False, val = None, node_num = 16, epoch_num = 50, 
-                     batch_num = 64, actfct = 'elu', initializer = TruncatedNormal(mean = 0.0, stddev = 0.05),
-                     optim = 'adam', lossfct = 'mean_squared_error', display_time = False):
+                     batch_num = 64, actfct = 'relu', initializer = TruncatedNormal(mean = 0.0, stddev = 0.05),
+                     optim = 'adam', lossfct = 'mean_squared_error', display_time = False, tot_time = True):
     '''
     Longstaff Schwartz Algorithm
     Implementation of the LSM using a sequence of neural network objects. Training 
@@ -69,6 +69,8 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
     x : Input data used to train the sequence of neural network objects
     y : Output data used to train the sequence of neural network objects
     '''
+    
+    total_time = 0
     
     tf.autograph.experimental.do_not_convert(
         func=None
@@ -179,7 +181,7 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
                             bias_initializer = tf.keras.initializers.Constant(b_mean[1])))
             NNet_seq.add(Dense(node_num, activation = actfct, 
                             kernel_initializer = tf.keras.initializers.Constant(w_mean[2]), 
-                            bias_initializer = tf.keras.initializers.Constant(b_mean[2])))
+                            bias_initializer = tf.keras.initializers.Constant(b_mean[2]))) 
             NNet_seq.add(Dense(1, activation = None, 
                             kernel_initializer = tf.keras.initializers.Constant(w_mean[3]), 
                             bias_initializer = tf.keras.initializers.Constant(b_mean[3])))
@@ -216,6 +218,11 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
         if display_time:
             print('Step:', np.round((i+1)*model['T']/nSteps, 2),' Time:', \
                   np.round(time.time()-start_time,2), 'sec')
+                
+        if tot_time:
+            total_time = total_time + np.round(time.time()-start_time,2)
+            print('timetot:', total_time)
+                
                 
     # Reversing lists 
     NN.reverse()
