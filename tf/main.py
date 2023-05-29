@@ -20,7 +20,7 @@ import tensorflow as tf
 
 
 '''
-Use this file to run code for any of the three stages (see description of each in READ.me).
+Use this file to run code for any of the three stages (see description of each in READme.md).
 
 Models from mlOSP are given in model_parameters.py; any of those variables can be imported to 
 this file to replace the current input dictionary.
