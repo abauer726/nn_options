@@ -3,7 +3,7 @@
 These files are used to price Bermudan options (discrete time steps), with the ultimate goal of pricing American options (not included yet).
 
 ## Folders
-The folder **tf** contains the neural network architecture for various options in Tensorflow. The folder **torch** contains files that currently do not run without error. 
+The folder **tf** contains the neural network architecture for various options in Tensorflow. The folder **torch** is a work-in-progress of transferring the neural network architecture to work with PyTorch. Files in this folder do not currently run without error. 
 
 
 ## Branches
