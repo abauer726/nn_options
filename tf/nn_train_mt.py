@@ -7,16 +7,15 @@ from payoffs import payoff
 import time
 import numpy as np
 import tensorflow as tf
-tf.autograph.experimental.do_not_convert
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.initializers import TruncatedNormal
 
-
-def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
-                     otm = False, data = False, val = None, node_num = 25, epoch_num = 5, 
-                     batch_num = 64, actfct = 'elu', initializer = TruncatedNormal(mean = 0.0, stddev = 0.05),
-                     optim = 'adam', lossfct = 'mean_squared_error', display_time = False, tot_time = True):
+def NN_seq_train_mt(stock, model, convert_in, convert_out, theta = 'average',
+                     data = False, node_num = 25, epoch_num = 5, 
+                     batch_num = 64, actfct = 'relu', 
+                     initializer = TruncatedNormal(mean = 0.0, stddev = 0.05),
+                     optim = 'adam', lossfct = 'mean_squared_error', display_time = False):
     '''
     Longstaff Schwartz Algorithm
     Implementation of the LSM using a sequence of neural network objects. Training 
@@ -43,18 +42,15 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
             If theta = 'random', then the weights and biases of all the neural
             networks are initialized with the keras 'initializer'
             The default is 'average'.
-    otm : Boolean asserting whether to use all the stock paths (including 
-          out-of-the-money paths) to train the sequence of neural networks. 
-          The default is False.
     data : Boolean asserting if the training data should be stored and returned. 
            The default is False.
     val : Selects the data values that will be outputted if data == True: 
           'cont' : realized payoffs via continuation values
           'time' : timing values
-    node_num : Integer with the number of nodes. The default is 16.
-    epoch_num : Integer with the number of epochs. The default is 50.
+    node_num : Integer with the number of nodes. The default is 25.
+    epoch_num : Integer with the number of epochs. The default is 5.
     batch_num : Integer with the number of batches. The default is 64.
-    actfct : String with the activation function. The default is 'elu'.
+    actfct : String with the activation function. The default is 'relu'.
     initializer : Keras initializer. The default is set to 
                   TruncatedNormal(mean = 0.0, stddev = 0.05).
     optim : Keras optimizer. The default is 'adam'.
@@ -69,18 +65,6 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
     x : Input data used to train the sequence of neural network objects
     y : Output data used to train the sequence of neural network objects
     '''
-    
-    total_time = 0
-    
-    tf.autograph.experimental.do_not_convert(
-        func=None
-    )
-    
-    if data:
-        if val == None:
-            raise TypeError('The type of output values has not been selected!')
-        if (val != 'cont') and (val != 'time'):
-            raise TypeError('Choose between continuation or timing value!')
     nn_dim = model['dim']                   # Dimension of the neural network
     nSims = len(stock[0])                   # Number of Simulations
     nSteps = int(model['T']/model['dt'])    # Number of Steps
@@ -96,33 +80,19 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
         if display_time:
             start_time = time.time()
         
-        if otm:
-            # Selecting all paths for training
-            x = stock[i]
-            y = q
-            if data:
-                x_agg.append(np.hstack((np.repeat((i+1)*model['T']/nSteps, \
-                                    nSims).reshape(nSims,1), x)))
-                if val == 'cont':
-                    y_agg.append(y)
-                elif val == 'time':
-                    y_agg.append(y-payoff(x, model)) 
-        else:
-            # Selecting In-the-Money paths for training
-            itm = [] 
-            for k in range(nSims):
-                if payoff(stock[i][k], model) > 0:
-                    itm.append([stock[i][k], q[k]])
-            x = np.stack(np.array(itm, dtype=object).transpose()[0])
-            y = np.array(itm, dtype=object).transpose()[1]
+        # Selecting In-the-Money paths for training
+        itm = [] 
+        for k in range(nSims):
+            if payoff(stock[i][k], model) > 0:
+                itm.append([stock[i][k], q[k]])
+        x = np.stack(np.array(itm, dtype=object).transpose()[0])
+        y = np.array(itm, dtype=object).transpose()[1]
+        y = np.exp(-model['r']*model['dt'])*y
             
-            if data:
-                x_agg.append(np.hstack((np.repeat((i+1)*model['T']/nSteps, \
+        if data:
+            x_agg.append(np.hstack((np.repeat((i+1)*model['T']/nSteps, \
                                 len(itm)).reshape((len(itm),1)), x)))
-                if val == 'cont':
-                    y_agg.append(y)
-                elif val == 'time':
-                    y_agg.append(y-payoff(x, model)) 
+            y_agg.append(y)
         
         # Scaling neural network inputs       
         input_scaled = []
@@ -181,7 +151,7 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
                             bias_initializer = tf.keras.initializers.Constant(b_mean[1])))
             NNet_seq.add(Dense(node_num, activation = actfct, 
                             kernel_initializer = tf.keras.initializers.Constant(w_mean[2]), 
-                            bias_initializer = tf.keras.initializers.Constant(b_mean[2]))) 
+                            bias_initializer = tf.keras.initializers.Constant(b_mean[2])))
             NNet_seq.add(Dense(1, activation = None, 
                             kernel_initializer = tf.keras.initializers.Constant(w_mean[3]), 
                             bias_initializer = tf.keras.initializers.Constant(b_mean[3])))
@@ -201,10 +171,8 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
         pred = NNet_seq.predict(input_scaled_all)
         prediction = np.ravel(convert_out.inverse_transform(pred))
         
-        
         # Computing continuation values
         qhat = np.array([prediction, np.zeros(nSims)]).max(axis = 0)
-        qhat = np.exp(-model['r']*model['dt'])*qhat
         imm_pay = payoff(stock[i], model)
         
         # Updating the continuation values and stopping times
@@ -218,11 +186,6 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
         if display_time:
             print('Step:', np.round((i+1)*model['T']/nSteps, 2),' Time:', \
                   np.round(time.time()-start_time,2), 'sec')
-                
-        if tot_time:
-            total_time = total_time + np.round(time.time()-start_time,2)
-            print('total_time:', total_time)
-                
                 
     # Reversing lists 
     NN.reverse()

@@ -20,28 +20,31 @@ import tensorflow as tf
 
 
 '''
-This file includes code used to run Stage 3 (see READ.me for description). 
-Stage 1 and 2 code is also included for reference. 
-
-To test various option contract parameters, change the input dictionary (mcall2 in line 38). 
-Models from mlOSP are given in model_parameters.py; any of those variables can be imported to 
-this file to replace the current input dictionary. 
-
-To test various neural network hyperparameters, change manually (epnum, node_num, etc) 
-in this file and also in the function files (NN_loop_v17 from nn_update_v17 to change # of loops)
+Use this file to run code for Stage 1 and Stage 2 testing (see description of each in READ.me).
 
 '''
 
 
+'''
+Stage 1 testing
+---------------
 
-mcall2 = {'dim': 2, 'K': 100, 'x0': np.repeat(100, 2), 'sigma': np.repeat(0.2,2), 
-         'r': 0.05, 'div': np.repeat(0.1,2), 'T': 3, 'dt': 1/3, 'payoff.func': 'maxi.call.payoff'}
+To test various option contract parameters, change the input dictionary (bput1 in line 38). 
+Models from mlOSP are given in model_parameters.py; any of those variables can be imported to 
+this file to replace the current input dictionary. 
 
+To test various neural network hyperparameters, change manually (epnum, node_num, etc) 
+in this file and also in NN_seq_train_neo from nn_train_neo.py
 
-#######################
-###### Stage One ######
-#######################
+'''
 
+#########################
+#### Stage 1 Testing ####
+#########################
+
+# 1D Basket Put
+bput1 = {'dim': 1, 'K': 40, 'x0': np.repeat(40, 1), 'sigma': np.repeat(0.2,1), 
+          'r': 0.06, 'div': np.repeat(0, 1), 'T': 1, 'dt': 0.04, 'payoff.func': 'put.payoff'}
 
 # Initializing -- Fine Time Grid
 model_update(mcall2, dt = 1/3)
@@ -51,154 +54,124 @@ stock_fine_m2 = stock_sim(100000, mcall2)
 (c_in_m2, c_out_m2) = scaler(stock_fine_m2, mcall2)
 
 # Thin at coarse dt
-coa_dt = 1/3
-model_update(mcall2, dt = coa_dt)
-stock_coa_m2 = stock_thin(stock_fine_m2, mcall2, coa_dt) # Coarse time grid
-
-## Sequence of Neural Networks -- Coarse Time Grid
-epnum = 5
-lr = 0.001
-b1 = 0.95
-b2 = 0.999
-opt = tf.keras.optimizers.Adam(learning_rate=lr, beta_1=b1, beta_2=b2)
+coa_dt = 0.04
+model_update(bput1, dt = coa_dt)
+stock_coa_p1 = stock_thin(stock_fine_p1, bput1, coa_dt) # Coarse time grid
+  
+# Training Data -- Coarse Time Grid
+epnum = 50
 np.random.seed(15)
 tf.random.set_seed(15)
-(NN_seq_coa_m2, x_m2, y_m2) = NN_seq_train_neo(stock_coa_m2, mcall2, c_in_m2, c_out_m2, \
-                                theta = 'average', data = True, val = 'cont', \
-                                node_num = 25, epoch_num = epnum, optim = opt, display_time=False)
+(NN_seq_coa_p1, x_p1, y_p1) = NN_seq_train_neo(stock_coa_p1, bput1, c_in_p1, c_out_p1, \
+                                    theta = 'average', data = True, val = 'cont', \
+                                    node_num = 60, epoch_num = epnum, display_time=True, tot_time = True)
 
-### Setting up the testing framework 
+# ## Testing 
 # Initializing Fine Test Grid
-model_update(mcall2, dt = 1/3)
+model_update(bput1, dt = 0.025)
 np.random.seed(18)
 tf.random.set_seed(18)
-stockFwd_fine_m2 = stock_sim(100000, mcall2)
-model_update(mcall2, dt = coa_dt)
-stockFwd_coa_m2 = stock_thin(stockFwd_fine_m2, mcall2, coa_dt)
+stockFwd_fine_p1 = stock_sim(100000, bput1)
+coa_dt = 0.04
+model_update(bput1, dt = coa_dt)
+stockFwd_coa_p1 = stock_thin(stockFwd_fine_p1, bput1, coa_dt)
 
-# Computing the option price
-r_seq_m2 = NN_payoff_neo(0, stockFwd_coa_m2, mcall2, 'seq', NN_seq_coa_m2, c_in_m2, \
-                              c_out_m2, val = 'cont', nn_val = 'cont', nn_dt = coa_dt, display_time=False)
-        
-print('Stage 1 Price:', np.round(np.mean(r_seq_m2), 4))
+(r_seq_coa_p1, stop_seq_p1) = NN_payoff_neo(0, stockFwd_coa_p1, bput1, 'seq', NN_seq_coa_p1, c_in_p1, c_out_p1, \
+                          val = 'cont', nn_val = 'cont', nn_dt = coa_dt, stop=True, display_time=False)
 
-# Contours of the Sequence of Neural Networks
-model_update(mcall2, dt = 1/3)
-norm_max = matplotlib.colors.Normalize(vmin=-15, vmax=15)
-contours = []
+print('dt:', coa_dt)
+print('Price - seq NN:', np.round(np.mean(r_seq_coa_p1), 4))
 
-# t_steps = np.arange(mcall2['dt'], mcall2['T'], mcall2['dt'])
-for t in np.arange(mcall2['dt'], mcall2['T'], mcall2['dt']):
-    start_time = time.time()
-    ## Contour
-    (x,y,z) = NN_contour_neo(t, NN_seq_coa_m2, c_in_m2, c_out_m2, mcall2, net = 'seq', \
-                             down = 0.8, up = 1.8, display_time = False)
-    
-    contours.append(plt.contour(x, y, z, [0], colors='black'))
-    plt.clabel(contours[-1], inline=True, fontsize=10)
-    plt.imshow(np.array(z, dtype = float), extent=[80, 180, 80, 180], \
-               origin='lower', cmap='Spectral', norm = norm_max, alpha=1)
-    plt.colorbar()
-    plt.plot(np.array([80,100]), np.array([100,100]), linewidth=1, color= 'black', linestyle='dashdot')
-    plt.plot(np.array([100,100]), np.array([80,100]), linewidth=1, color= 'black', linestyle='dashdot')
-    plt.title('Stage 1 - Map: '+str(np.round(t, 4))+' Price: '+str(np.round(np.mean(r_seq_m2),4)))
-    plt.savefig('MC-Stage-1-ReLU-Map-'+str(np.round(t, 4))+'.png', dpi=1000)
-    plt.clf()
-    print('Map:', np.round(t,3),'Time:', np.round(time.time()-start_time,2), 'sec')
+## Boundary Plot
+# Sequence of Neural Networks 
+(x,y,z) = NN_bound_neo(NN_seq_coa_p1, c_in_p1, c_out_p1, bput1, net = 'seq', display_time = False)
 
-### STAGE 2 ###
+norm_put = matplotlib.colors.Normalize(vmin=-2, vmax=2)
+contour = plt.contour(x, y, z, [0], colors='black')
+plt.clabel(contour, inline=True, fontsize=5)
+plt.imshow(np.array(z, dtype = float), extent = [0, 1, 30, 41],  aspect='auto', \
+            origin='lower', cmap='Spectral', norm = norm_put, alpha=1)
+plt.colorbar()
+#plt.plot(np.arange(0, bput1['dt'] + bput1['T'], bput1['dt']), np.repeat(bput1['K'], 21), linewidth=1, color= 'black', linestyle='dashdot')
+plt.xlabel('Time')
+plt.ylabel('Stock Price')
+#plt.title('1-D Put Boundary Plot')
+# plt.title('!D Put Boundary Plot - dt: '+str(coa_dt)+' Price: '+str(np.round(np.mean(r_seq_coa_p1),4)))
+plt.savefig('Basket-Put-Boundary-seq-NN-dt-'+str(coa_dt)+'.png', dpi=1000)
+plt.clf()
 
-# Shuffling data
-np.random.seed(0)
-merge = np.append(x_m2.transpose(), y_m2.transpose()).reshape(mcall2['dim']+2, len(y_m2)).transpose()
-np.random.shuffle(merge)
-x_r_m2 = merge.transpose()[:-1].transpose()
-y_r_m2 = merge.transpose()[-1].reshape(-1, 1) 
 
-### Setting up the testing framework 
-# Initializing Fine Test Grid
-model_update(mcall2, dt = 1/3)
-np.random.seed(18)
-tf.random.set_seed(18)
-stockFwd_fine_m2 = stock_sim(100000, mcall2)
-model_update(mcall2, dt = coa_dt)
-stockFwd_coa_m2 = stock_thin(stockFwd_fine_m2, mcall2, coa_dt)
 
-# Stage 2: Initializing the Aggregate Network
-epnum = 5
-lr = 0.001
-b1 = 0.95
-b2 = 0.999
-opt = tf.keras.optimizers.Adam(learning_rate=lr, beta_1=b1, beta_2=b2)
+'''
+Stage 2 testing
+---------------
+
+To test various option contract parameters, change the input dictionary (bput1 in line 38). 
+Models from mlOSP are given in model_parameters.py; any of those variables can be imported to 
+this file to replace the current input dictionary. 
+
+To test various neural network hyperparameters, change manually (epnum, node_num, etc) 
+in this file and also in NN_saggregate_neo from nn_aggregate_v3.py
+
+
+'''
+
+### Stage 2 
+
+
+mcall2 = {'dim': 5, 'K': 100, 'x0': np.repeat(70, 5), 'sigma': [0.08,0.16,0.24,0.32,0.4], 
+          'r': 0.05, 'div': np.repeat(0.1,5), 'T': 3, 'dt': (1/3), 'payoff.func': 'maxi.call.payoff'} # cosmin: mcall1
+
+   
+## Aggregate Neural Network -- Coarse Time Grid
 np.random.seed(16)
 tf.random.set_seed(16)
-NN_agg_m2 = NN_aggregate_neo(mcall2, NN_seq_coa_m2, c_in_m2, c_out_m2, \
-                        nn_val = 'cont', data = True, x = x_r_m2, y = y_r_m2, \
-                        node_num = 25, batch_num = 64, epoch_num = epnum, \
-                        optim = opt, display_time=False)
-
-# Computing the option price
-(r_agg_stage2_m2, stop_stage2_m2) = NN_payoff_neo(0, stockFwd_coa_m2, mcall2, 'agg', NN_agg_m2, c_in_m2, \
-                              c_out_m2, val = 'cont', nn_val = 'cont', nn_dt = coa_dt, 
-                              stop = True, display_time=False)
-        
-print('Stage 2 Price:', np.round(np.mean(r_agg_stage2_m2), 4))
-
-# Contours 80 - 180
-# t_steps = np.arange(mcall2['dt'], mcall2['T'], mcall2['dt'])
-for t in np.arange(mcall2['dt'], mcall2['T'], mcall2['dt']):
-    start_time = time.time()
-    ## Contour
-    (x,y,z) = NN_contour_neo(t, NN_agg_m2, c_in_m2, c_out_m2, mcall2, net = 'agg', \
-                             nn_val = 'cont', nn_dt = coa_dt, down = 0.8, up = 1.8, display_time = False)
+# Same Paths
+NN_agg_coa_p1 = NN_aggregate_neo(bput1, NN_seq_coa_p1, c_in_p1, c_out_p1, nn_val = 'cont', \
+                            stock = stock_coa_p1, node_num = 25, batch_num = 64, \
+                            epoch_num = epnum, display_time=True)
     
-    contours.append(plt.contour(x, y, z, [0], colors='black'))
-    plt.clabel(contours[-1], inline=True, fontsize=10)
-    plt.imshow(np.array(z, dtype = float), extent=[80, 180, 80, 180], \
-               origin='lower', cmap='Spectral', norm = norm_max, alpha=1)
-    plt.colorbar()
-    plt.plot(np.array([80,100]), np.array([100,100]), linewidth=1, color= 'black', linestyle='dashdot')
-    plt.plot(np.array([100,100]), np.array([80,100]), linewidth=1, color= 'black', linestyle='dashdot')
-    plt.title('Stage 2 - Map: '+str(np.round(t, 2))+' Price: '+str(np.round(np.mean(r_agg_stage2_m2),4)))
-    plt.savefig('MC-Stage-2-ReLU-Map-'+str(np.round(t, 2))+'-wide.png', dpi=1000)
-    plt.clf()
-    print('Stage 2 Map:', np.round(t,3), 'Price:', np.round(np.mean(r_agg_stage2_m2), 4), \
-          'Time:', np.round(time.time()-start_time,2), 'sec')
-
-### STAGE 3 ###
-
-### Setting up the validating paths
-# model_update(mcall2, dt = 1/3)
-np.random.seed(99)
-tf.random.set_seed(99)
-stock_valid_m2 = stock_sim(10000, mcall2)
-
+# Training Data
 np.random.seed(16)
 tf.random.set_seed(16)
-loops = 40
-loop_size = 500
-epnum_s3 = 5
-# For specific learning rate
-# optp = [0.001, 0.95, 0.999]
-
-# Looping
-(x_qmc_m2, time_val_m2, lr_m2, dif_m2, NN_max_m2) = NN_loop_v17(loops, loop_size, mcall2, \
-        NN_agg_m2, c_in_m2, c_out_m2, nn_dt = coa_dt, \
-        stock_check = stock_valid_m2, ci = 0.99, epoch_num = epnum_s3, display_time = True)
-
-NN_max_m2 = NN_loop_v17(loops, loop_size, mcall2, NN_agg_m2, c_in_m2, c_out_m2, \
-                        nn_dt = coa_dt, stock_check = stock_valid_m2, epoch_num = epnum_s3, \
-                        display_time = True)
+NN_agg_coa_data_p1 = NN_aggregate_neo(bput1, NN_seq_coa_p1, c_in_p1, c_out_p1, nn_val = 'cont', \
+                            data = True, x = x_p1, y = y_p1, node_num = 25, batch_num = 64, \
+                            epoch_num = epnum, display_time=True)
     
 ## Testing 
-# Final Loop Price
-(r_agg_stage3_m2, stop_stage3_m2) = NN_payoff_neo(0, stockFwd_coa_m2, mcall2, 'agg', \
-            NN_agg_m2, c_in_m2, c_out_m2, val = 'cont', nn_val = 'cont', \
-            nn_dt = coa_dt, stop = True, display_time=False)
-# Max Loop Price
-(r_max_stage3_m2, stop_max_stage3_m2) = NN_payoff_neo(0, stockFwd_coa_m2, mcall2, 'agg', \
-            NN_max_m2, c_in_m2, c_out_m2, val = 'cont', nn_val = 'cont', nn_dt = coa_dt, \
-            stop = True, display_time=False)
+# Initializing Fine Test Grid
+model_update(bput1, dt = 0.025)
+np.random.seed(18)
+tf.random.set_seed(18)
+stockFwd_fine_p1 = stock_sim(100000, bput1)
+coa_dt = 0.2
+
+for dt in [0.2, 0.1, 0.05, 0.025]:
+    start_time = time.time()
+    model_update(bput1, dt = dt)
+    stockFwd_coa_p1 = stock_thin(stockFwd_fine_p1, bput1, dt) # Coarse Test Grid
+    # Same Paths
+    (r_agg_coa_p1, stop_agg_p1) = NN_payoff_neo(0, stockFwd_coa_p1, bput1, 'agg', NN_agg_coa_p1, c_in_p1, c_out_p1, \
+                             val = 'cont', nn_val = 'cont', nn_dt = coa_dt, stop=True, display_time=False)
+        
+    # Training Data 
+    (r_agg_coa_data_p1, stop_agg_data_p1) = NN_payoff_neo(0, stockFwd_coa_p1, bput1, 'agg', NN_agg_coa_data_p1, c_in_p1, c_out_p1, \
+                             val = 'cont', nn_val = 'cont', nn_dt = coa_dt, stop=True, display_time=False)
+     
+    print('dt:', dt)
+    # Same Paths  
+    print('Price - agg NN - Path:', np.round(np.mean(r_agg_coa_p1), 4))
+    print('Avg Std agg NN - Path:', np.round(np.std(r_agg_coa_p1, ddof = 1)/np.sqrt(len(stockFwd_coa_p1[0])), 4))
+    # Training Data 
+    print('Price - agg NN - Data:', np.round(np.mean(r_agg_coa_data_p1), 4))
+    print('Avg Std agg NN - Data:', np.round(np.std(r_agg_coa_data_p1, ddof = 1)/np.sqrt(len(stockFwd_coa_p1[0])), 4))
     
-print('Stage 3 -Final- Price:', np.round(np.mean(r_agg_stage3_m2), 4))
-print('Stage 3 -Max- Price:', np.round(np.mean(r_max_stage3_m2), 4))
+    # ## Realized Payoff Comparisons
+    # # Data vs. Same Paths
+    # plt.scatter(r_agg_coa_data_p1[:5000], r_agg_coa_p1[:5000], s=1, c='black', marker='o')
+    # plt.plot([-0.2, 10], [-0.2, 10], color = 'red', linewidth=0.5)
+    # plt.xlabel('Aggregate - Data')
+    # plt.ylabel('Aggregate - Same Paths')
+    # plt.title('Realized Payoff - dt: '+str(dt))
+    # plt.savefig('Aggregate-vs-Aggregate-1D-Put-train-'+str(coa_dt)+'-dt-'+str(dt)+'-forensics-time.png', dpi=1000)
+    # plt.clf()

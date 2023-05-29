@@ -27,37 +27,37 @@ def payoff(stock_val, model):
     if model['payoff.func'] == 'put.payoff':
         if dim:
             return np.array([model['K']-np.ndarray.mean(stock_val, axis = 1), \
-                             np.zeros(nSims)], dtype=object).max(axis = 0)
+                             np.zeros(nSims)], dtype=object).max(axis = 0).astype(float)
         else:
             return np.array([model['K'] - np.ndarray.mean(stock_val, axis = 0), \
-                             np.zeros(1)], dtype=object).max(axis = 0)
+                             np.zeros(1)], dtype=object).max(axis = 0).astype(float)
     
     ## Multivariate Min Put
     ## Min Put payoff \eqn{(K-min(x))_+}
     elif model['payoff.func'] == 'mini.put.payoff':
         if dim: 
             return np.array([model['K']-np.ndarray.min(stock_val, axis = 1), \
-                     np.zeros(nSims)], dtype=object).max(axis = 0)
+                     np.zeros(nSims)], dtype=object).max(axis = 0).astype(float)
         else:
             return np.array([model['K']-np.ndarray.min(stock_val, axis = 0), \
-                     np.zeros(1)], dtype=object).max(axis = 0)
+                     np.zeros(1)], dtype=object).max(axis = 0).astype(float)
         
     ## Arithmetic basket Call on average asset price
     ## Call payoff \eqn{(mean(x)-K)_+}
     elif model['payoff.func'] == 'call.payoff': 
         if dim: 
             return np.array([np.ndarray.mean(stock_val, axis = 1) - model['K'], \
-                     np.zeros(nSims)], dtype=object).max(axis = 0)
+                     np.zeros(nSims)], dtype=object).max(axis = 0).astype(float)
         else:
             return np.array([np.ndarray.mean(stock_val, axis = 0) - model['K'], \
-                     np.zeros(1)], dtype=object).max(axis = 0)
+                     np.zeros(1)], dtype=object).max(axis = 0).astype(float)
     
     ## Multivariate Max Call
     ## Max Call payoff \eqn{(max(x)-K)_+}
     elif model['payoff.func'] == 'maxi.call.payoff':
         if dim: 
             return np.array([np.ndarray.max(stock_val, axis = 1) - model['K'], \
-                     np.zeros(nSims)], dtype=object).max(axis = 0)
+                     np.zeros(nSims)], dtype=object).max(axis = 0).astype(float)
         else:
             return np.array([np.ndarray.max(stock_val, axis = 0) - model['K'], \
-                     np.zeros(1)], dtype=object).max(axis = 0)
+                     np.zeros(1)], dtype=object).max(axis = 0).astype(float)
