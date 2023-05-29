@@ -14,8 +14,8 @@ from tensorflow.keras.initializers import TruncatedNormal
 
 
 def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
-                     otm = False, data = False, val = None, node_num = 16, epoch_num = 50, 
-                     batch_num = 64, actfct = 'relu', initializer = TruncatedNormal(mean = 0.0, stddev = 0.05),
+                     otm = False, data = False, val = None, node_num = 25, epoch_num = 5, 
+                     batch_num = 64, actfct = 'elu', initializer = TruncatedNormal(mean = 0.0, stddev = 0.05),
                      optim = 'adam', lossfct = 'mean_squared_error', display_time = False, tot_time = True):
     '''
     Longstaff Schwartz Algorithm
@@ -221,7 +221,7 @@ def NN_seq_train_neo(stock, model, convert_in, convert_out, theta = 'average',
                 
         if tot_time:
             total_time = total_time + np.round(time.time()-start_time,2)
-            print('timetot:', total_time)
+            print('total_time:', total_time)
                 
                 
     # Reversing lists 
